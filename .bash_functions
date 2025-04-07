@@ -6,6 +6,24 @@
 
 
 
+# sops
+sopsenc() {
+	local files=${@} file newfile extension
+	for file in $files; do
+		if [[ $file =~ \.enc\. ]]; then
+			newfile=$(echo "$file" | sed -r "s/\.enc//g")
+			sops -d $file > $newfile
+		else
+			extension=${file##*.}
+			newfile="${file%.*}.enc.$extension"
+			sops -e $file > $newfile
+		fi
+	done
+}
+
+
+
+
 # bdiff - BETTER DIFF (COLORIZED & SIDE BY SIDE)
 function bdiff() {
 	local FILE1="$1" FILE2="$2"
