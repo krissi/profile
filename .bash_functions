@@ -11,7 +11,7 @@ sopsenc() {
 	local files=${@} file newfile extension
 	for file in $files; do
 		if [[ $file =~ \.enc\. ]]; then
-			newfile=$(echo "$file" | sed -r "s/\.enc//g")
+			newfile=$(echo "$file" | sed -r "s/\.enc\./.clear./g")
 			sops -d $file > $newfile
 		else
 			extension=${file##*.}
