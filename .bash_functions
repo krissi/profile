@@ -14,8 +14,9 @@ sopsenc() {
 			newfile=$(echo "$file" | sed -r "s/\.enc\./.clear./g")
 			sops -d $file > $newfile
 		else
-			extension=${file##*.}
-			newfile="${file%.*}.enc.$extension"
+			cleanfile=$(echo "$file" | sed -r "s/\.clear//g")
+			extension=${cleanfile##*.}
+			newfile="${cleanfile%.*}.enc.$extension"
 			sops -e $file > $newfile
 		fi
 	done
