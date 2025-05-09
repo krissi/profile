@@ -418,7 +418,8 @@ if [[ $UID -eq 0 ]]; then
 	MESG+="\n          ${BWHI}CPU${RES}:  ${CPU_SPC}${BWHI}${CPU_NUM}${BBLA}x${RES} ${BWHI}${CPU_SPD}${RES}GHz ${BBLA}/${RES} ${CPU_LOAD_1_CLR}${CPU_LOAD_1}${RES} ${BBLA}[${WHI}1m${BBLA}]${RES} | ${CPU_LOAD_5_CLR}${CPU_LOAD_5}${RES} ${BBLA}[${WHI}5m${BBLA}]${RES} | ${CPU_LOAD_15_CLR}${CPU_LOAD_15}${RES} ${BBLA}[${WHI}15m${BBLA}]${RES}\n"
 
 	MEM_ALL=$(grep -P '^[ \t]*MemTotal[ \t]*:' /proc/meminfo |grep -Eo '[0-9]+' |head -n1)
-	MEM_USE=$(grep -P '^[ \t]*Active[ \t]*:' /proc/meminfo |grep -Eo '[0-9]+' |head -n1)
+	MEM_FREE=$(grep -P '^[ \t]*MemAvailable[ \t]*:' /proc/meminfo |grep -Eo '[0-9]+' |head -n1)
+  	MEM_USE=$(( $MEM_ALL - $MEM_FREE ))
 	MEM_PCT=$(( $MEM_USE * 100 / $MEM_ALL ))
 	if [[ $MEM_PCT -lt 70 ]]; then MEM_CLR=${GRE}; elif [[ $MEM_PCT -lt 90 ]]; then MEM_CLR=${YEL}; else MEM_CLR=${RED}; fi
 	if [[ $(printf "$MEM_PCT" |wc -c) -lt 2 ]]; then MEM_SPC="  "; elif [[ $(printf "$MEM_PCT" |wc -c) -lt 3 ]]; then MEM_SPC=" "; else MEM_SPC=""; fi
