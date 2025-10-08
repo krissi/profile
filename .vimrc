@@ -17,7 +17,9 @@ set hlsearch
 set incsearch
 set ignorecase
 set nonumber
+set autoindent
 set smartindent
+set copyindent
 set ruler
 set showcmd
 set showmatch
