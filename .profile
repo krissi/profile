@@ -12,7 +12,3 @@ if [ -n "$HOME" ]; then
 		PATH+=":$HOME/.local/bin"
 	fi
 fi
-
-if [ -z "$(grep -i 'ubuntu' /etc/issue 2>/dev/null)" ]; then
-	mesg n
-fi
