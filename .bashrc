@@ -3,33 +3,10 @@
 #
 # The structure of this .bashrc is as follows:
 #
-# [HOVT] [[PROCS]] [[VMS]] [[GIT]] [EXITCODE] USER@HOST PATH 
-#  ||||      |        |       |
-#  ||||      |        |       |- ONLY IF IN GIT FOLDER
-#  ||||      |        |
-#  ||||      |        |- VM STATS (ONLY IF VM HOST)
-#  ||||      |
-#  ||||      |- PROCS (ONLY IF ANY OF THE PROCS ARE RUNNING)
-#  ||||      |- C (RED)     = CLUSTER (COROSYNC / PACEMAKER)
-#  ||||      |- P (GREY)    = POSTFIX
-#  ||||      |- E (GREY)    = EXIM
-#  ||||      |- D (GREY)    = DOVECOT
-#  ||||      |- C (GREY)    = CYRUS
-#  ||||      |- P (WHITE)   = FTP (PROFTPD)
-#  ||||      |- V (WHITE)   = FTP (VSFTPD)
-#  ||||      |- M (BLUE)    = MARIADB / MYSQL
-#  ||||      |- P (BLUE)    = POSTGRESQL
-#  ||||      |- H (GREEN)   = HAPROXY
-#  ||||      |- N (GREEN)   = NGINX
-#  ||||      |- A (GREEN)   = APACHE2
-#  ||||      |- V (GREEN)   = VARNISH
-#  ||||      |- P (GREEN)   = PHP-FPM
-#  ||||      |- E (CYAN)    = ELASTICSEARCH
-#  ||||      |- K (CYAN)    = KIBANA
-#  ||||      |- R (MAGENTA) = REDIS
-#  ||||      |- M (MAGENTA) = MEMCACHED
-#  ||||      |- B (YELLOW)  = BAREOS-DIR
-#  ||||
+# [HOVT] [[VMS]] [EXITCODE] USER@HOST PATH 
+#  ||||     |
+#  ||||     |- VM STATS (ONLY IF VM HOST)
+#  ||||  
 #  ||||- TYPE (ONLY IF TYPE FOUND)
 #  ||||- L = LIVECONFIG
 #  ||||- C = CONFIXX
@@ -80,9 +57,17 @@ function _prompt_command() {
   ## EXIT CODE OF LAST COMMAND
   local EXIT="$?"
 
-  ## SET PS1 TO EMPTY VALUE
-  PS1=""
+  ## ADD EXIT CODE OF LAST COMMAND TO PS1
+  if [[ ${EXIT} -eq 0 ]]; then
+		EX="\[\e[01;32m\]+"
+  else
+		EX="\[\e[01;31m\]-"
+  fi
 
+	PS1="${_PS1/<EX>/$EX}"
+}
+
+function _prompt_command_static() {
   ## ANSI COLOR CODES
   # RESET
   local RES='\[\e[00m\]'
@@ -99,7 +84,7 @@ function _prompt_command() {
   ## CHECK IF ROOT
   if [[ ${UID} -eq 0 ]]; then
 		## CHECK HARDWARE TYPE
-		PS1+="${BBLA}[${BWHI}"
+		echo -ne "${BBLA}[${BWHI}"
 		VMH=0
 		if		[[ -d /proc/xen ]] && [[ -n "$(grep -o 'control_d' /proc/xen/capabilities 2>/dev/null)" ]]; then
 			VMH=1
@@ -117,182 +102,130 @@ function _prompt_command() {
 				VMM=$(xe vm-list is-control-domain=false power-state=running params=name-label 2>/dev/null |grep -Pv '^[ \t]*$' |wc -l)
 			fi
 		elif	[[ -n "$(which xe-daemon 2>/dev/null)" ]]; then
-			PS1+="C"
+			echo -ne "C"
 		elif	[[ -d /proc/xen ]] && [[ -z "$(grep -o 'control_d' /proc/xen/capabilities 2>/dev/null)" ]]; then
-			PS1+="U"
+			echo -ne "U"
 		elif	[[ -n "$(grep -ao 'container=lxc' /proc/1/environ 2>/dev/null)" ]]; then
-			PS1+="L"
+			echo -ne "L"
 		elif	[[ "$(dmidecode -s system-product-name 2>/dev/null)" == "KVM" ]] && [[ -d /lib/modules/*/kernel ]] && [[ -n "$(find /lib/modules/*/kernel |grep -o 'kvm.ko' 2>/dev/null)" ]] || [[ -n "$(grep -Eio 'QEMU|KVM' /proc/cpuinfo)" ]]; then
-			PS1+="K"
+			echo -ne "K"
 		elif	[[ "$(dmidecode -s system-product-name 2>/dev/null)" == "VirtualBox" ]]; then
-			PS1+="V"
+			echo -ne "V"
 		else
-			PS1+="B"
+			echo -ne "B"
 		fi
 
 		## CHECK OPERATING SYSTEM
-		PS1+="${WHI}"
+		echo -ne "${WHI}"
 		if		[[ -n "$(head -n1 /etc/issue* 2>/dev/null |grep -oi 'Debian')" ]]; then
-			PS1+="D"
+			echo -ne "D"
 			CV=10
 			V=$(head -n1 /etc/debian_version 2>/dev/null |cut -d'.' -f1)
 			if		[[ ${V} -ge ${CV} ]]; then
-				PS1+="${GRE}${V}"
+				echo -ne "${GRE}${V}"
 			elif	[[ ${V} -ge $(echo $(( ${CV} - 1 ))) ]]; then
-				PS1+="${YEL}${V}"
+				echo -ne "${YEL}${V}"
 			else
-				PS1+="${RED}${V}"
+				echo -ne "${RED}${V}"
 			fi
 		elif	[[ -n "$(head -n1 /etc/issue* 2>/dev/null |grep -oi 'Ubuntu')" ]]; then
-			PS1+="U"
+			echo -ne "U"
 			CV=$(( $(date +%Y |tail -c3) / 2 * 2 ))
 			V=$(egrep -o '[0-9]{1,2}\.[0-9]{1,2}' /etc/issue 2>/dev/null |cut -d'.' -f1)
 			if		[[ ${V} -ge ${CV} ]]; then
-				PS1+="${GRE}${V}"
+				echo -ne "${GRE}${V}"
 			elif	[[ ${V} -ge $(echo $(( ${CV} - 4 ))) ]]; then
-				PS1+="${YEL}${V}"
+				echo -ne "${YEL}${V}"
 			else
-				PS1+="${RED}${V}"
+				echo -ne "${RED}${V}"
 			fi
 		elif	[[ -n "$(head -n1 /etc/issue* 2>/dev/null |grep -oi 'XenServer')" ]]; then
-			PS1+="X"
+			echo -ne "X"
 			CV=7
 			V=$(head -n1 /etc/issue* |egrep -o '([0-9]{1,2}\.){2}[0-9]{1,2}' |cut -d'.' -f1)
 			if		[[ ${V} -ge ${CV} ]]; then
-				PS1+="${BGRE}${V}"
+				echo -ne "${BGRE}${V}"
 			elif	[[ ${V} -ge $(echo $(( ${CV} - 1 ))) ]]; then
-				PS1+="${BYEL}${V}"
+				echo -ne "${BYEL}${V}"
 			else
-				PS1+="${BRED}${V}"
+				echo -ne "${BRED}${V}"
 			fi
 		elif	[[ -n "$(head -n1 /etc/issue* 2>/dev/null |grep -oi 'CentOS')" ]]; then
-			PS1+="C"
+			echo -ne "C"
 			CV=7
 			V=$(egrep -o '[0-9]{1,2}\.[0-9]{1,2}' /etc/issue 2>/dev/null |cut -d'.' -f1)
 			if		[[ ${V} -ge ${CV} ]]; then
-				PS1+="${GRE}${V}"
+				echo -ne "${GRE}${V}"
 			elif	[[ ${V} -ge $(echo $(( ${CV} - 1 ))) ]]; then
-				PS1+="${YEL}${V}"
+				echo -ne "${YEL}${V}"
 			else
-				PS1+="${RED}${V}"
+				echo -ne "${RED}${V}"
 			fi
 		elif	[[ -f /etc/fedora-release ]]; then
-			PS1+="F"
+			echo -ne "F"
 			CV=31
 			V="$(grep -Po '[0-9]+' /etc/fedora-release)"
 			if		[[ ${V} -ge ${CV} ]]; then
-				PS1+="${GRE}${V}"
+				echo -ne "${GRE}${V}"
 			elif	[[ ${V} -ge $(echo $(( ${CV} - 1 ))) ]]; then
-				PS1+="${YEL}${V}"
+				echo -ne "${YEL}${V}"
 			else
-				PS1+="${RED}${V}"
+				echo -ne "${RED}${V}"
 			fi
 		else
-			PS1+="?${WHI}?"
+			echo -ne "?${WHI}?"
 		fi
 
 		## CHECK TYPE
     if		[[ -n "$(ps -o pid=,comm= -C liveconfig,lcclient 2>/dev/null)" ]]; then
-			PS1+="${BGRE}L"
+			echo -ne "${BGRE}L"
 		elif	[[ -d "/etc/apache2/confixx_vhosts" ]]; then
-			PS1+="${BYEL}C"
+			echo -ne "${BYEL}C"
 		elif	[[ -d "/etc/apache2/plesk.conf.d" ]] || [[ -d "/etc/nginx/plesk.conf.d" ]]; then
-			PS1+="${BRED}P"
+			echo -ne "${BRED}P"
 		elif	[[ ${VMH} = 1 ]]; then
-			PS1+="${BWHI}V"
+			echo -ne "${BWHI}V"
 		fi
-		PS1+="${BBLA}] "
-
-		# CHECK PROCS
-		PROCS=""
-		if		[[ -n "$(ps -o pid= -C corosync,pacemaker 2>/dev/null)" ]]; then                            PROCS+="${BRED}C"; fi # RED/C     - CLUSTER
-		if		[[ -n "$(ps -o pid= -C smtpd,postfix,master 2>/dev/null)" ]]; then                          PROCS+="${WHI}P";  fi # GREY/P    - POSTFIX
-		if		[[ -n "$(ps -o pid= -C exim 2>/dev/null)" ]]; then                                          PROCS+="${WHI}E";  fi # GREY/E    - EXIM
-		if		[[ -n "$(ps -o pid= -C dovecot 2>/dev/null)" ]]; then                                       PROCS+="${WHI}D";  fi # GREY/D    - DOVECOT
-		if		[[ -n "$(ps -o pid= -C cyrmaster 2>/dev/null)" ]]; then                                     PROCS+="${WHI}C";  fi # GREY/C    - CYRUS
-		if		[[ -n "$(ps -o pid= -C proftpd 2>/dev/null)" ]]; then                                       PROCS+="${BWHI}F"; fi # WHITE/F  - PROFTPD
-		if		[[ -n "$(ps -o pid= -C vsftpd 2>/dev/null)" ]]; then                                        PROCS+="${BWHI}V"; fi # WHITE/V  - VSFTPD
-		if		[[ -n "$(ps -o pid= -C mysqld,mariadb 2>/dev/null)" ]]; then                                PROCS+="${BBLU}M"; fi # BLUE/M    - MARIADB / MYSQL
-		if		[[ -n "$(ps -o pid= -C postgres 2>/dev/null)" ]]; then                                      PROCS+="${BBLU}P"; fi # BLUE/P    - POSTGRESQL
-		if		[[ -n "$(ps -o pid= -C haproxy 2>/dev/null)" ]]; then                                       PROCS+="${GRE}H";  fi # GREEN/H   - HAPROXY
-		if		[[ -n "$(ps -o pid= -C nginx 2>/dev/null)" ]]; then                                         PROCS+="${GRE}N";  fi # GREEN/N   - NGINX
-		if		[[ -n "$(ps -o pid= -C apache2,httpd 2>/dev/null)" ]]; then                                 PROCS+="${GRE}A";  fi # GREEN/A   - APACHE2
-		if		[[ -n "$(ps -o pid= -C varnishd 2>/dev/null)" ]]; then                                      PROCS+="${GRE}V";  fi # GREEN/V   - VARNISH
-		if		[[ -n "$(ps -A -o args= 2>/dev/null |grep -v "grep" |grep "php-fpm")" ]]; then              PROCS+="${GRE}P";  fi # GREEN/P   - PHP-FPM
-		if		[[ -n "$(ps -A -o args= 2>/dev/null |grep -v "grep" |grep "elasticsearch")" ]]; then        PROCS+="${BCYA}E"; fi # CYAN/E    - ELASTICSEARCH
-		if		[[ -n "$(ps -A -o args= 2>/dev/null |grep -v "grep" |grep "kibana")" ]]; then               PROCS+="${BCYA}K"; fi # CYAN/K    - KIBANA
-		if		[[ -n "$(ps -o pid= -C redis-server 2>/dev/null)" ]]; then                                  PROCS+="${BMAG}R"; fi # MAGENTA/R - REDIS
-		if		[[ -n "$(ps -o pid= -C memcached 2>/dev/null)" ]]; then                                     PROCS+="${BMAG}M"; fi # MAGENTA/M - MEMCACHED
-		if		[[ -n "$(ps -o pid= -C bareos-dir 2>/dev/null)" ]]; then                                    PROCS+="${YEL}B";  fi # YELLOW/B  - BAREOS-DIR
-		if [[ -n "${PROCS}" ]]; then
-			PS1+="${BBLA}[${PROCS}${BBLA}] "
-		fi
+		echo -ne "${BBLA}] "
 
 		## CHECK IF VM HOST
 		if [[ ${VMH} -eq 1 ]]; then
-			PS1+="${BBLA}["
+			echo -ne "${BBLA}["
 			
 			if		[[ ${VMR} -eq ${VMM} ]]; then
-				PS1+="${BGRE}"
+				echo -ne "${BGRE}"
 			elif	[[ ${VMR} -lt ${VMM} ]] && [[ ${VMR} -gt 0 ]]; then
-				PS1+="${BYEL}"
+				echo -ne "${BYEL}"
 			else
-				PS1+="${BRED}"
+				echo -ne "${BRED}"
 			fi
 			
-			PS1+="${VMR}${WHI}/"
+			echo -ne "${VMR}${WHI}/"
 			
 			if		[[ ${VMM} -eq 0 ]]; then
-				PS1+="${BYEL}"
+				echo -ne "${BYEL}"
 			else
-				PS1+="${BGRE}"
+				echo -ne "${BGRE}"
 			fi
 
-			PS1+="${VMM}${BBLA}] "
-		fi
-
-
-	## IF NOT ROOT
-  else
-		# ADD GIT REPO STATUS TO PS1
-		git rev-parse &>/dev/null
-		REPO=$?
-		if [[ ${REPO} -eq 0 ]]; then
-			PS1+="${BBLA}["
-			UPS=${1:-'@{u}'}
-			LOC=$(git rev-parse @{0} 2>/dev/null)
-			REM=$(git rev-parse "${UPS}" 2>/dev/null)
-			BAS=$(git merge-base @{0} "${UPS}" 2>/dev/null)
-			COM=$(git status |grep 'modified\|new file\|deleted\|Untracked files:')
-			if		[[ "${LOC}" == "${REM}" ]] && [[ -z "${COM}" ]]; then
-				PS1+="${BGRE}OK"
-			elif	[[ "${REM}" == "${BAS}" ]] || [[ -n "${COM}" ]]; then
-				PS1+="${BYEL}PUSH"
-			elif	[[ "${LOC}" == "${BAS}" ]]; then
-				PS1+="${BYEL}PULL"
-			else
-				PS1+="${BRED}DIV"
-			fi
-			PS1+="${BBLA}] "
+			echo -ne "${VMM}${BBLA}] "
 		fi
   fi
 
-  ## ADD EXIT CODE OF LAST COMMAND TO PS1
-  if [[ ${EXIT} -eq 0 ]]; then
-    PS1+="${BBLA}[${BGRE}+${WHI}${BBLA}] "
-  else
-    PS1+="${BBLA}[${BRED}-${WHI}${BBLA}] "
-  fi
+	echo -ne "${BBLA}[<EX>${WHI}${BBLA}] "
 
 	if [[ "$(whoami |egrep '^web[0-9]*')" != "" ]]; then
-		PS1+="${BGRE}\u"
+		echo -ne "${BGRE}\u"
 	else
-		PS1+="${BBLU}\u"
+		echo -ne "${BBLU}\u"
 	fi
 
   ## ADD HOSTNAME AND CURRENT FOLDER TO PS1
-  PS1+="${BBLA}@${BWHI}\h${BBLA} ${BBLU}\w${BWHI} \$${RES} "
+  echo -ne "${BBLA}@${BWHI}\h${BBLA} ${BBLU}\w${BWHI} \$${RES} "
 }
+
+_PS1="$(_prompt_command_static)"
+unset _prompt_command_static
 
 ### ENABLE FORWARD SEARCH (CTRL + s)
 stty -ixon
@@ -586,3 +519,5 @@ fi
 
 # RESTORE ORIGINAL SHELL PARAMETERS
 export LC_NUMERIC="$LCNUMERICORIG" LC_COLLATE="$LCCOLLATEORIG"
+
+test -r "$HOME/.bashrc.local" && source "$HOME/.bashrc.local"
